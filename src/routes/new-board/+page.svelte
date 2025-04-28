@@ -1,30 +1,13 @@
 <script lang="ts">
-	import { DempaClient, initDempaClient, type User } from '$lib/dempa';
-	import { bech32 } from '@scure/base';
+	import { currentUser, dempaClient } from '$lib/dempa';
 	import { Button } from 'flowbite-svelte';
-	import { onMount } from 'svelte';
 
 	let name = $state('');
 	let description = $state('');
-	let user: null | User = $state(null);
-	let dempa: null | DempaClient = $state(null);
-
-	onMount(async () => {
-		const sk = localStorage.getItem('sk');
-		const relay = localStorage.getItem('relayUrl');
-
-		if (!sk || !relay) {
-			alert('Please create a user first');
-			return;
-		}
-		const skUint8Array = bech32.decodeToBytes(sk as `${string}1${string}`).bytes;
-
-		dempa = initDempaClient(skUint8Array, [relay]);
-		user = await dempa.fetchUser();
-	});
 
 	async function publishBoard() {
-		if (!user || !dempa) return;
+		const dempa = dempaClient();
+		const user = await currentUser();
 
 		const board = dempa.createBoard({
 			name,
@@ -71,8 +54,10 @@
 			onclick={async () => {
 				const id = await publishBoard();
 				if (!id) return;
-				user?.JoinedBoardIds.push(id);
-				await dempa?.publishUser(user!);
+				const dempa = dempaClient();
+				const user = await currentUser();
+				user.JoinedBoardIds.push(id);
+				await dempa.publishUser(user!);
 				window.location.href = '/';
 			}}>ボードを作成</Button
 		>

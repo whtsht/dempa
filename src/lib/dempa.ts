@@ -1,3 +1,4 @@
+import { bech32 } from "@scure/base";
 import {
   finalizeEvent,
   getPublicKey,
@@ -100,11 +101,17 @@ class DempaClient {
   async fetchComment(id: string): Promise<Comment | null> {
     return this.fetch<Comment>(id, this.COMMENT_KIND);
   }
-  
+
+  async fetchAllComments(threadId: string): Promise<Comment[]> {
+    return this.fetchAll<Comment>(this.COMMENT_KIND, 1000, threadId).then((
+      comments,
+    ) => comments.filter((comment) => comment.threadId === threadId));
+  }
+
   async publishUser(user: User): Promise<void> {
     this.publish(user, 0, user.pubkey);
   }
-  
+
   async fetchUser(): Promise<User | null> {
     return this.fetch<User>(this.pk, 0);
   }
@@ -212,12 +219,17 @@ class DempaClient {
     return JSON.parse(event.content);
   }
 
-  private async fetchAll<T>(kind: number): Promise<T[]> {
+  private async fetchAll<T>(
+    kind: number,
+    limit: number = 100,
+    search: string | undefined = undefined,
+  ): Promise<T[]> {
     const events = await this.pool.querySync(
       this.relayList,
       {
         kinds: [kind],
-        limit: 100,
+        limit,
+        search,
       },
       {
         maxWait: 1000,
@@ -230,22 +242,28 @@ class DempaClient {
   }
 }
 
-let dempaClient: DempaClient | null = null;
+let dempaClient_: DempaClient | null = null;
 
-function initDempaClient(
-  sk: Uint8Array,
-  relayList: string[] = [],
-): DempaClient {
-  dempaClient = new DempaClient(sk, relayList);
-  return dempaClient;
+function dempaClient(): DempaClient {
+  const sk = localStorage.getItem("sk");
+  const relay = localStorage.getItem("relayUrl");
+
+  if (!sk || !relay) {
+    throw new Error("Secret key or relay URL not found in localStorage");
+  }
+  const skUint8Array = bech32.decodeToBytes(sk as `${string}1${string}`).bytes;
+  dempaClient_ = new DempaClient(skUint8Array, [relay]);
+  return dempaClient_;
 }
 
-function currentDempaClient(): DempaClient {
-  if (!dempaClient) {
-    throw new Error("DempaClient is not initialized");
+async function currentUser(): Promise<User> {
+  const client = dempaClient();
+  const user = await client.fetchUser();
+  if (!user) {
+    throw new Error("User not found");
   }
-  return dempaClient;
+  return user;
 }
 
 export type { Action, Board, Comment, Member, Role, Thread, User };
-export { currentDempaClient, DempaClient, initDempaClient };
+export { currentUser, DempaClient, dempaClient };

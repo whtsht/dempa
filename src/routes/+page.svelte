@@ -1,33 +1,20 @@
 <script lang="ts">
-	import { DempaClient, initDempaClient, type Board, type Thread, type User } from '$lib/dempa';
-	import { bech32 } from '@scure/base';
-	import { onMount } from 'svelte';
+	import {
+		currentUser,
+		dempaClient,
+		type Board,
+		type Thread,
+	} from '$lib/dempa';
 
 	let boards: Board[] = $state([]);
 	let threads: Thread[] = $state([]);
-	let user: null | User = $state(null);
-	let dempa: null | DempaClient = $state(null);
-
-	onMount(async () => {
-		const sk = localStorage.getItem('sk');
-		const relay = localStorage.getItem('relayUrl');
-
-		if (!sk || !relay) {
-			alert('Please create a user first');
-			return;
-		}
-		const skUint8Array = bech32.decodeToBytes(sk as `${string}1${string}`).bytes;
-
-		dempa = initDempaClient(skUint8Array, [relay]);
-		user = await dempa.fetchUser();
-		console.log('User:', user);
-	});
 
 	let selectedBoard: null | Board = $state(null);
 
 	$effect(() => {
-		if (!selectedBoard || !dempa) return;
+		if (!selectedBoard) return;
 		(async () => {
+			const dempa = dempaClient();
 			const fetchedThread = await dempa.fetchAllThreads(selectedBoard.id);
 			console.log('Fetched threads:', fetchedThread);
 			threads = fetchedThread;
@@ -35,11 +22,13 @@
 	});
 
 	$effect(() => {
-		if (!user) return;
 		(async () => {
+			const user = await currentUser();
+			const dempa = dempaClient();
+
 			await Promise.all(
 				user.JoinedBoardIds.map(async (id) => {
-					const board = await dempa?.fetchBoard(id);
+					const board = await dempa.fetchBoard(id);
 					if (board) {
 						boards.push(board);
 					} else {
@@ -73,6 +62,7 @@
 			<div class="p-4 border border-gray-200 rounded hover:shadow-md transition">
 				<h3 class="text-lg font-semibold">{thread.title}</h3>
 				<p class="text-gray-600 mt-2">{thread.content}</p>
+				<a href="/threads/show/{thread.id}">開く</a>
 			</div>
 		{/each}
 	</div>

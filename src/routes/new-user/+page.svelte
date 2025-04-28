@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { initDempaClient } from '$lib/dempa';
+	import { DempaClient } from '$lib/dempa';
 	import { bech32 } from '@scure/base';
 	import { Button } from 'flowbite-svelte';
 	import { getPublicKey } from 'nostr-tools';
@@ -18,7 +18,7 @@
 		const relayUrl = 'ws://localhost:7000';
 		localStorage.setItem('sk', sk);
 		localStorage.setItem('relayUrl', relayUrl);
-		const dempa = initDempaClient(skUint8Array, [relayUrl]);
+		const dempa = new DempaClient(skUint8Array, [relayUrl]);
 		await dempa.publishUser({
 			name,
 			pubkey: getPublicKey(skUint8Array),

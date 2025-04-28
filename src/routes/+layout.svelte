@@ -20,7 +20,7 @@
 			</a>
 			<a
 				class="px-3 py-1 rounded hover:bg-blue-100 focus:outline-none focus:ring"
-				href="/new-thread"
+				href="/threads/new"
 			>
 				New Thread
 			</a>
