@@ -33,6 +33,7 @@
 	},
 	"dependencies": {
 		"@popperjs/core": "^2.11.8",
+		"@scure/base": "^1.2.5",
 		"@tailwindcss/vite": "^4.1.4",
 		"flowbite": "^3.1.2",
 		"flowbite-svelte": "^0.48.6",
