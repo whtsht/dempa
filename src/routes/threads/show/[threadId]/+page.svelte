@@ -12,7 +12,6 @@
 		const { threadId } = page.params;
 		const dempa = dempaClient();
 		thread = await dempa.fetchThread(threadId);
-		console.log('Fetched thread:', thread);
 	});
 
 	async function publishComment() {
@@ -25,7 +24,6 @@
 		await dempa.publishComment(comment);
 		commentValue = '';
 		thread = await dempa.fetchThread(threadId);
-		console.log('Updated thread:', thread);
 	}
 
 	$effect(() => {

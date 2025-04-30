@@ -1,10 +1,5 @@
 <script lang="ts">
-	import {
-		currentUser,
-		dempaClient,
-		type Board,
-		type Thread,
-	} from '$lib/dempa';
+	import { currentUser, dempaClient, type Board, type Thread } from '$lib/dempa';
 
 	let boards: Board[] = $state([]);
 	let threads: Thread[] = $state([]);
@@ -30,6 +25,7 @@
 				user.JoinedBoardIds.map(async (id) => {
 					const board = await dempa.fetchBoard(id);
 					if (board) {
+						console.log('Fetched board:', board, id);
 						boards.push(board);
 					} else {
 						console.error(`Board with ID ${id} not found`);

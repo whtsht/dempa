@@ -2,7 +2,6 @@ import { bech32 } from "@scure/base";
 import {
   finalizeEvent,
   getPublicKey,
-  nip19,
   SimplePool,
   verifyEvent,
 } from "nostr-tools";
@@ -122,7 +121,7 @@ class DempaClient {
     boardId: string;
   }): Thread {
     return {
-      id: this.createNaddrEncode(this.THREAD_KIND),
+      id: this.generateId(),
       title,
       content,
       boardId,
@@ -137,7 +136,7 @@ class DempaClient {
     members: Member[];
   }): Board {
     return {
-      id: this.createNaddrEncode(this.BOARD_KIND),
+      id: this.generateId(),
       name,
       description,
       created_at: Date.now(),
@@ -152,7 +151,7 @@ class DempaClient {
     threadId: string;
   }): Comment {
     return {
-      id: this.createNaddrEncode(this.COMMENT_KIND),
+      id: this.generateId(),
       content,
       author: this.pk,
       threadId,
@@ -170,12 +169,8 @@ class DempaClient {
     };
   }
 
-  private createNaddrEncode(kind: number): string {
-    return nip19.naddrEncode({
-      identifier: crypto.randomUUID(),
-      pubkey: this.pk,
-      kind,
-    });
+  private generateId(): string {
+    return crypto.randomUUID();
   }
 
   private async publish<T>(
@@ -187,12 +182,12 @@ class DempaClient {
       kind: kind,
       created_at: Math.floor(Date.now() / 1000),
       tags: [
+        ["d", `${id}`],
         ["a", `${kind}:${this.pk}:${id}`],
         ["id", id],
       ],
       content: JSON.stringify(value),
     };
-    console.log("Publishing event", eventTemplate);
 
     const event = finalizeEvent(eventTemplate, this.sk);
 
@@ -204,7 +199,7 @@ class DempaClient {
       this.relayList,
       {
         kinds: [kind],
-        limit: 1,
+        limit: 100,
         search: id,
       },
       {
@@ -265,5 +260,15 @@ async function currentUser(): Promise<User> {
   return user;
 }
 
+async function isLogin(): Promise<boolean> {
+  try {
+    const client = dempaClient();
+    const user = await client.fetchUser();
+    return !!user;
+  } catch (_) {
+    return false;
+  }
+}
+
 export type { Action, Board, Comment, Member, Role, Thread, User };
-export { currentUser, DempaClient, dempaClient };
+export { currentUser, DempaClient, dempaClient, isLogin };
