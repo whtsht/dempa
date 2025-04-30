@@ -46,13 +46,13 @@
 						<span class="text-sm text-gray-500">秘密鍵 (Secret Key)</span>
 						<div class="flex space-x-2">
 							<button
-								on:click={toggleShowSk}
+								onclick={toggleShowSk}
 								class="px-3 py-1 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-colors"
 							>
 								{showSk ? '非表示' : '表示'}
 							</button>
 							<button
-								on:click={copySk}
+								onclick={copySk}
 								class="px-3 py-1 text-sm bg-green-500 hover:bg-green-600 text-white rounded-md transition-colors flex items-center gap-1"
 							>
 								<span>コピー</span>

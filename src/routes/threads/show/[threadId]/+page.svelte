@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { dempaClient, type Comment, type Thread } from '$lib/dempa';
+	import { currentUser, dempaClient, type Comment, type Thread } from '$lib/dempa';
 	import { onMount } from 'svelte';
 	import { Button, Label, Textarea } from 'flowbite-svelte';
 
@@ -24,6 +24,20 @@
 		await dempa.publishComment(comment);
 		commentValue = '';
 		thread = await dempa.fetchThread(threadId);
+	}
+
+	async function isCommentAllowed() {
+		const dempa = dempaClient();
+		const user = await currentUser();
+		if (!user) return false;
+		if (!thread) return false;
+		const board = await dempa.fetchBoard(thread.boardId);
+		if (!board) return false;
+		const member = board.members.find((member) => member.pubkey === user.pubkey);
+		if (!member) return false;
+		const role = board.roles.find((role) => role.name === member.role);
+		if (!role) return false;
+		return role.actions.includes('Comment');
 	}
 
 	$effect(() => {
@@ -68,5 +82,15 @@
 		rows={4}
 		class="block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500"
 	/>
-	<Button onclick={publishComment}>送信</Button>
+	{#await isCommentAllowed() then isCommentAllowed}
+		{#if !isCommentAllowed}
+			<p class="text-red-500">あなたのコメントが許可されたユーザーではありません</p>
+			<p class="text-red-500">あなたのコメントは他のユーザーには見られない可能性があります</p>
+		{/if}
+	{:catch error}
+		<p class="text-red-500">エラーが発生しました: {error.message}</p>
+	{/await}
+	<div class="flex justify-end space-x-2">
+		<Button onclick={publishComment}>送信</Button>
+	</div>
 </div>

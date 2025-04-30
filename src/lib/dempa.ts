@@ -25,10 +25,10 @@ type Member = {
 type Role = {
 	name: string;
 	approver: string | null;
-	action: Action;
+	actions: Action[];
 };
 
-type Action = 'OpenThread' | 'Comment' | 'VoteThread' | 'VoteComment' | 'Admin';
+type Action = 'OpenThread' | 'Comment' | 'Board';
 
 type Thread = {
 	id: string;
@@ -231,9 +231,9 @@ class DempaClient {
 let dempaClient_: DempaClient | null = null;
 
 function dempaClient(): DempaClient {
-  if (dempaClient_) {
-    return dempaClient_;
-  }
+	if (dempaClient_) {
+		return dempaClient_;
+	}
 
 	const sk = localStorage.getItem('sk');
 	const relay = localStorage.getItem('relayUrl');
