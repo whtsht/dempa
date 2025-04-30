@@ -13,6 +13,21 @@
 		return board ? board.name : 'Unknown Board';
 	}
 
+	async function removeBoard(boardId: string) {
+		const dempa = dempaClient();
+		const user = await currentUser();
+		if (!user) return;
+
+		const boardIndex = boards.findIndex((board) => board.id === boardId);
+		if (boardIndex !== -1) {
+			boards.splice(boardIndex, 1);
+			user.JoinedBoardIds = user.JoinedBoardIds.filter((id) => id !== boardId);
+			await dempa.publishUser(user);
+		} else {
+			console.error(`Board with ID ${boardId} not found`);
+		}
+	}
+
 	async function addBoard(boardId: string) {
 		const dempa = dempaClient();
 		const user = await currentUser();
@@ -102,13 +117,16 @@
 	<ul>
 		{#each boards as board (board.id)}
 			<li class="mb-2">
-				<button
-					class="block w-full text-left px-2 py-1 rounded hover:bg-blue-100 focus:outline-none focus:ring
+				<div class="flex flex-row justify-between items-center">
+					<button
+						class="block flex-1 text-left px-2 py-1 rounded hover:bg-blue-100 focus:outline-none focus:ring
                 {board.id === selectedBoard?.id ? 'bg-blue-200 font-semibold' : ''}"
-					onclick={() => (selectedBoard = board)}
-				>
-					{board.name}
-				</button>
+						onclick={() => (selectedBoard = board)}
+					>
+						{board.name}
+					</button>
+					<Button onclick={() => removeBoard(board.id)}>削除</Button>
+				</div>
 			</li>
 		{/each}
 	</ul>
