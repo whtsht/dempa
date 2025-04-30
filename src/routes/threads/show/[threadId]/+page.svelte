@@ -53,14 +53,13 @@
 	<br />
 	<br />
 	<h1 class="text-2xl font-bold mb-4">コメント</h1>
-	
+
 	{#each comments as comment}
 		<div class="bg-gray-100 rounded-lg p-4 mb-4">
 			<p class="text-gray-700">{comment.content}</p>
 		</div>
 	{/each}
-	
-	
+
 	<Label for="comment" class="block mb-2 text-sm font-medium text-gray-900">コメントを追加</Label>
 	<Textarea
 		bind:value={commentValue}

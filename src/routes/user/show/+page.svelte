@@ -9,9 +9,8 @@
 	});
 </script>
 
-
 {#if user}
-  <div class="text-2xl font-bold mb-4">User: {user.name}</div>
+	<div class="text-2xl font-bold mb-4">User: {user.name}</div>
 {:else}
-  <div class="text-2xl font-bold mb-4">Loading user data...</div>
+	<div class="text-2xl font-bold mb-4">Loading user data...</div>
 {/if}
