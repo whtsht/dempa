@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { currentUser, type User } from '$lib/dempa';
+	import { User } from '$lib/models/user';
 	import { onMount } from 'svelte';
 
 	let user: null | User = $state(null);
@@ -8,7 +8,7 @@
 	let copied = $state(false);
 
 	onMount(async () => {
-		user = await currentUser();
+		user = await User.current();
 		sk = localStorage.getItem('sk') || '';
 	});
 

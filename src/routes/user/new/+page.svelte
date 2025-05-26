@@ -1,8 +1,7 @@
 <script lang="ts">
-	import { DempaClient } from '$lib/dempa';
+	import { User } from '$lib/models/user';
 	import { bech32 } from '@scure/base';
 	import { Button } from 'flowbite-svelte';
-	import { getPublicKey } from 'nostr-tools';
 
 	let name = $state('');
 	let sk = $state('');
@@ -13,16 +12,9 @@
 			return;
 		}
 
-		const skUint8Array = bech32.decodeToBytes(sk as `${string}1${string}`).bytes;
-
-		const relayUrl = 'ws://localhost:7000';
-		localStorage.setItem('sk', sk);
-		localStorage.setItem('relayUrl', relayUrl);
-		const dempa = new DempaClient(skUint8Array, [relayUrl]);
-		await dempa.publishUser({
-			name,
-			pubkey: getPublicKey(skUint8Array),
-			JoinedBoardIds: []
+		User.create({
+			secretKey: sk,
+			name
 		});
 	}
 

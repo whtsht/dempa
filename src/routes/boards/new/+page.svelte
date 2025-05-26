@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { currentUser, dempaClient, type Role, type Action, type Member } from '$lib/dempa';
+	import { Board, type Action, type Member, type Role } from '$lib/models/board';
+	import { User } from '$lib/models/user';
 	import { Button, Card, Checkbox, Select } from 'flowbite-svelte';
 	import { onMount } from 'svelte';
 
@@ -69,7 +70,7 @@
 	let selectedRole = $state('admin');
 
 	onMount(async () => {
-		const user = await currentUser();
+		const user = await User.current();
 		members.push({
 			pubkey: user.pubkey,
 			role: 'admin'
@@ -121,16 +122,17 @@
 	}
 
 	async function publishBoard() {
-		const dempa = dempaClient();
-
-		const board = dempa.createBoard({
+		const board = await Board.create({
 			name,
 			description,
 			roles,
 			members
 		});
-		await dempa.publishBoard(board);
-		return board.id;
+		const user = await User.current();
+		console.log('Board created:', board);
+		console.log('User:', user);
+		user.JoinedBoardIds.push(board.id);
+		await user.update();
 	}
 </script>
 
@@ -266,12 +268,7 @@
 		<Button
 			color="primary"
 			onclick={async () => {
-				const id = await publishBoard();
-				if (!id) return;
-				const dempa = dempaClient();
-				const user = await currentUser();
-				user.JoinedBoardIds.push(id);
-				await dempa.publishUser(user!);
+				await publishBoard();
 				window.location.href = '/';
 			}}>ボードを作成</Button
 		>

@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { currentUser, dempaClient, type Board, type Thread } from '$lib/dempa';
+	import { Board } from '$lib/models/board';
+	import { Thread } from '$lib/models/thread';
+	import { User } from '$lib/models/user';
 	import { Button } from 'flowbite-svelte';
 
 	let boards: Board[] = $state([]);
@@ -8,37 +10,34 @@
 	let selectedBoard: null | Board = $state(null);
 
 	async function getBoardName(boardId: string): Promise<string> {
-		const dempa = dempaClient();
-		const board = await dempa.fetchBoard(boardId);
+		const board = await Board.find(boardId);
 		return board ? board.name : 'Unknown Board';
 	}
 
 	async function removeBoard(boardId: string) {
-		const dempa = dempaClient();
-		const user = await currentUser();
+		const user = await User.current();
 		if (!user) return;
 
 		const boardIndex = boards.findIndex((board) => board.id === boardId);
 		if (boardIndex !== -1) {
 			boards.splice(boardIndex, 1);
 			user.JoinedBoardIds = user.JoinedBoardIds.filter((id) => id !== boardId);
-			await dempa.publishUser(user);
+			await user.update();
 		} else {
 			console.error(`Board with ID ${boardId} not found`);
 		}
 	}
 
 	async function addBoard(boardId: string) {
-		const dempa = dempaClient();
-		const user = await currentUser();
+		const user = await User.current();
 		if (!user) return;
 		if (boards.some((board) => board.id === boardId)) return;
 
-		const board = await dempa.fetchBoard(boardId);
+		const board = await Board.find(boardId);
 		if (board) {
 			boards.push(board);
 			user.JoinedBoardIds.push(boardId);
-			await dempa.publishUser(user);
+			await user.update();
 		} else {
 			console.error(`Board with ID ${boardId} not found`);
 		}
@@ -46,20 +45,19 @@
 
 	async function getRecommendedThreads(): Promise<Thread[]> {
 		const recommendedThreads = [];
-		const dempa = dempaClient();
 		if (selectedBoard) {
-			const fetchedThread = await dempa.fetchAllThreads(selectedBoard.id);
+			const fetchedThread = await Thread.all(selectedBoard.id);
 			recommendedThreads.push(...fetchedThread);
 		}
 
 		// スレッドが10個以上ならば、ユーザーが参加しているボードからスレッドを取得する
 		if (recommendedThreads.length <= 10) {
-			const user = await currentUser();
+			const user = await User.current();
 			const fetchBoards = (await Promise.all(
-				user.JoinedBoardIds.map((id) => dempa.fetchBoard(id)).filter((board) => board !== null)
+				user.JoinedBoardIds.map((id) => Board.find(id)).filter((board) => board !== null)
 			)) as Board[];
 			const fetchedThread = (
-				await Promise.all(fetchBoards.map((board) => dempa.fetchAllThreads(board.id)))
+				await Promise.all(fetchBoards.map((board) => Thread.all(board.id)))
 			).flat();
 
 			for (const thread of fetchedThread) {
@@ -72,9 +70,9 @@
 
 		// スレッドが10個以下ならば、適当なスレッドを取得する
 		if (recommendedThreads.length <= 10) {
-			const fetchBoards = await dempa.fetchAllBoards();
+			const fetchBoards = await Board.all();
 			const fetchedThread = (
-				await Promise.all(fetchBoards.map((board) => dempa.fetchAllThreads(board.id)))
+				await Promise.all(fetchBoards.map((board) => Thread.all(board.id)))
 			).flat();
 
 			for (const thread of fetchedThread) {
@@ -96,19 +94,8 @@
 
 	$effect(() => {
 		(async () => {
-			const user = await currentUser();
-			const dempa = dempaClient();
-
-			await Promise.all(
-				user.JoinedBoardIds.map(async (id) => {
-					const board = await dempa.fetchBoard(id);
-					if (board) {
-						boards.push(board);
-					} else {
-						console.error(`Board with ID ${id} not found`);
-					}
-				})
-			);
+			const user = await User.current();
+			boards = await user.joinedBoards();
 		})();
 	});
 </script>

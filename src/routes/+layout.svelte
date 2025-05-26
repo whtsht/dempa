@@ -1,16 +1,16 @@
 <script lang="ts">
 	let { children } = $props();
 	import '../app.css';
-	import { isLogin } from '$lib/dempa';
 	import { onMount } from 'svelte';
 	import { Modal } from 'flowbite-svelte';
 	import { page } from '$app/state';
+	import { User } from '$lib/models/user';
 
 	let loginModalOpen = $state(false);
 
 	onMount(async () => {
 		if (page.url.pathname === '/user/new') return;
-		if (!(await isLogin())) {
+		if (!(await User.current())) {
 			loginModalOpen = true;
 		}
 	});

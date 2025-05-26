@@ -1,6 +1,9 @@
 <script lang="ts">
-	import { currentUser, dempaClient, type Board } from '$lib/dempa';
+	import type { Board } from '$lib/models/board';
+	import { Thread } from '$lib/models/thread';
+	import { User } from '$lib/models/user';
 	import { Button, Select } from 'flowbite-svelte';
+	import { onMount } from 'svelte';
 
 	let boards = $state<Board[]>([]);
 
@@ -14,19 +17,15 @@
 			return;
 		}
 
-		const dempa = dempaClient();
-
-		const thread = dempa.createThread({
-			boardId: selectedBoard.id,
+		await Thread.create({
 			title,
-			content
+			content,
+			boardId: selectedBoard.id
 		});
-
-		await dempa.publishThread(thread);
 	}
-	
+
 	async function isOpenThreadAllowed() {
-		const user = await currentUser();
+		const user = await User.current();
 		if (!user) return false;
 		if (!selectedBoard) return false;
 		const board = selectedBoard;
@@ -37,22 +36,9 @@
 		return role.actions.includes('OpenThread');
 	}
 
-	$effect(() => {
-		(async () => {
-			const user = await currentUser();
-			const dempa = dempaClient();
-
-			await Promise.all(
-				user.JoinedBoardIds.map(async (id) => {
-					const board = await dempa.fetchBoard(id);
-					if (board) {
-						boards.push(board);
-					} else {
-						console.error(`Board with ID ${id} not found`);
-					}
-				})
-			);
-		})();
+	onMount(async () => {
+		const user = await User.current();
+		boards = await user.joinedBoards();
 	});
 </script>
 
@@ -76,11 +62,13 @@
 		placeholder="メッセージを入力..."
 		class="w-full p-2 border rounded"
 	></textarea>
-	
+
 	{#if selectedBoard}
 		{#await isOpenThreadAllowed() then isOpenThreadAllowed}
 			{#if !isOpenThreadAllowed}
-				<p class="text-red-500">あなたは{selectedBoard.name}でスレッド立ち上げが許可されていません</p>
+				<p class="text-red-500">
+					あなたは{selectedBoard.name}でスレッド立ち上げが許可されていません
+				</p>
 				<p class="text-red-500">あなたのスレッドは他のユーザーには見られない可能性があります</p>
 			{/if}
 		{:catch error}

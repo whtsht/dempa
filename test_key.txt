@@ -1,5 +1,5 @@
-Your Public Key (npub)
-npub14gd4ym5rdchmh59z7w3qurqg6j537lfge5h6q8tyt5hfzegg4mgsmggjv2
+aaa
+nsec1lgq3nf3kpwhwpukwtv3xnrmv625ltl0wxh44pk7va8yhnfa0mknqjyf5k8
 
-Your Private Key (nsec)
-nsec194s3xdaqvkzxd8e2rkx8tn9t604eqvx03x34v56wf7589avfnllqc43jjt
+ccc
+nsec14tlvxsmkvw0ynus9fh4zkh3n6ufyhuj880l2ftaa43ms398munws5d3t48
