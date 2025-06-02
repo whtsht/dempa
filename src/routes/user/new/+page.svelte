@@ -4,23 +4,23 @@
 	import { Button } from 'flowbite-svelte';
 
 	let name = $state('');
-	let sk = $state('');
+	let secretKey = $state('');
 	let isNewUser = $state(false);
 
 	async function handleLogin() {
-		if (!sk.includes('1')) {
+		if (!secretKey.includes('1')) {
 			alert('Invalid secret key');
 			return;
 		}
 
 		try {
-			const existingUser = await User.login({ secretKey: sk });
+			const existingUser = await User.login({ secretKey: secretKey });
 			
 			if (existingUser) {
 				window.location.href = '/';
 			} else if (isNewUser && name.trim()) {
 				await User.create({
-					secretKey: sk,
+					secretKey: secretKey,
 					name: name.trim()
 				});
 				window.location.href = '/';
@@ -36,18 +36,18 @@
 
 	function generateKey() {
 		const skUint8Array = generateSecretKey();
-		sk = bech32.encodeFromBytes('nsec', skUint8Array);
-		console.log('Generated secret key:', sk);
+		secretKey = bech32.encodeFromBytes('nsec', skUint8Array);
+		console.log('Generated secret key:', secretKey);
 	}
 
 	function copyToClipboard() {
-		if (sk === '') {
+		if (secretKey === '') {
 			alert('Please generate a secret key first');
 			return;
 		}
 
 		navigator.clipboard
-			.writeText(sk)
+			.writeText(secretKey)
 			.then(() => {
 				alert('Secret key copied to clipboard');
 			})
@@ -63,7 +63,7 @@
 	<div class="flex flex-row space-x-2">
 		<input
 			type="password"
-			bind:value={sk}
+			bind:value={secretKey}
 			placeholder="秘密鍵 (nsec1...)"
 			class="border border-gray-300 rounded p-2 w-full flex-1"
 		/>

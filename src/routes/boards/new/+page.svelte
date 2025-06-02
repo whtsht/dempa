@@ -64,7 +64,6 @@
 		roles = roles.filter((_, i) => i !== index);
 	}
 
-	// メンバー管理関連
 	let members: Member[] = $state([]);
 	let memberPubkey = $state('');
 	let selectedRole = $state('admin');
@@ -88,7 +87,6 @@
 			return;
 		}
 
-		// 重複チェック
 		if (members.some((member) => member.pubkey === memberPubkey)) {
 			alert('このメンバーは既に追加されています');
 			return;
@@ -102,7 +100,6 @@
 			}
 		];
 
-		// フォームをリセット
 		memberPubkey = '';
 		selectedRole = 'admin';
 	}
@@ -115,7 +112,6 @@
 		members = members.filter((_, i) => i !== index);
 	}
 
-	// 公開鍵を短く表示するヘルパー関数
 	function formatPubkey(pubkey: string): string {
 		if (pubkey.length <= 10) return pubkey;
 		return `${pubkey.substring(0, 5)}...${pubkey.substring(pubkey.length - 5)}`;

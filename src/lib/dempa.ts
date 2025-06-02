@@ -49,12 +49,16 @@ class DempaClient {
 				maxWait: 1000,
 			},
 		);
-		const event = events.find((event) =>
-			event.tags.some((tag) => tag[0] === "id" && tag[1] === id)
+		
+		const matchingEvents = events.filter((event) =>
+			event.tags.some((tag) => tag[0] === "id" && tag[1] === id) && verifyEvent(event)
 		);
+		
+		if (matchingEvents.length === 0) return null;
+		
+		const latestEvent = matchingEvents.sort((a, b) => b.created_at - a.created_at)[0];
 
-		if (!event || !verifyEvent(event)) return null;
-		return JSON.parse(event.content);
+		return JSON.parse(latestEvent.content);
 	}
 
 	async fetchAll<T>(
@@ -72,7 +76,23 @@ class DempaClient {
 			},
 		);
 
-		return events.filter((event) => verifyEvent(event)).map((event) =>
+		const verifiedEvents = events.filter((event) => verifyEvent(event));
+		
+		const latestEventsByKey = new Map();
+		
+		verifiedEvents.forEach((event) => {
+			const idTag = event.tags.find((tag) => tag[0] === "id");
+			if (idTag && idTag[1]) {
+				const eventId = idTag[1];
+				const existing = latestEventsByKey.get(eventId);
+				
+				if (!existing || event.created_at > existing.created_at) {
+					latestEventsByKey.set(eventId, event);
+				}
+			}
+		});
+
+		return Array.from(latestEventsByKey.values()).map((event) =>
 			JSON.parse(event.content)
 		);
 	}

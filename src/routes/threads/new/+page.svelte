@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Board } from '$lib/models/board';
 	import { Thread } from '$lib/models/thread';
+	import { ThreadRequest } from '$lib/models/thread-request';
 	import { User } from '$lib/models/user';
 	import { Button, Select } from 'flowbite-svelte';
 	import { onMount } from 'svelte';
@@ -10,30 +11,88 @@
 	let title = $state('');
 	let content = $state('');
 	let selectedBoard: null | Board = $state(null);
+	let isThreadAllowed: null | boolean = $state(null);
 
-	async function publishThread(title: string, content: string) {
+	async function publishThread() {
 		if (!selectedBoard) {
-			alert('No board selected');
+			alert('ボードを選択してください');
 			return;
 		}
 
-		await Thread.create({
-			title,
-			content,
-			boardId: selectedBoard.id
-		});
+		if (!title.trim() || !content.trim()) {
+			alert('タイトルと内容を入力してください');
+			return;
+		}
+
+		if (isThreadAllowed === false) {
+			alert('スレッド作成の権限がありません。');
+			return;
+		}
+
+		try {
+			await Thread.create({
+				title: title.trim(),
+				content: content.trim(),
+				boardId: selectedBoard.id
+			});
+			
+			alert('スレッドを作成しました。');
+			window.location.href = '/';
+		} catch (error) {
+			console.error('Thread creation failed:', error);
+			if (error instanceof Error) {
+				alert(`スレッドの作成に失敗しました: ${error.message}`);
+			} else {
+				alert('スレッドの作成に失敗しました。');
+			}
+		}
 	}
 
-	async function isOpenThreadAllowed() {
-		const user = await User.current();
-		if (!user) return false;
-		if (!selectedBoard) return false;
-		const board = selectedBoard;
-		const member = board.members.find((member) => member.pubkey === user.pubkey);
-		if (!member) return false;
-		const role = board.roles.find((role) => role.name === member.role);
-		if (!role) return false;
-		return role.actions.includes('OpenThread');
+	async function requestThread() {
+		if (!selectedBoard) {
+			alert('ボードを選択してください');
+			return;
+		}
+
+		if (!title.trim() || !content.trim()) {
+			alert('タイトルと内容を入力してください');
+			return;
+		}
+
+		try {
+			await ThreadRequest.create({
+				title: title.trim(),
+				content: content.trim(),
+				boardId: selectedBoard.id
+			});
+			
+			title = '';
+			content = '';
+			alert('スレッドリクエストを送信しました。承認をお待ちください。');
+		} catch (error) {
+			console.error('Thread request failed:', error);
+			if (error instanceof Error) {
+				alert(`スレッドリクエストの送信に失敗しました: ${error.message}`);
+			} else {
+				alert('スレッドリクエストの送信に失敗しました。');
+			}
+		}
+	}
+
+	async function updateIsThreadAllowed() {
+		try {
+			if (!selectedBoard) return false;
+			const user = await User.current();
+			if (!user) return false;
+			return await Thread.canUserCreateThread(user.pubkey, selectedBoard.id);
+		} catch (error) {
+			console.error('Error checking thread permission:', error);
+			return false;
+		}
+	}
+
+	async function onBoardChange() {
+		isThreadAllowed = await updateIsThreadAllowed();
 	}
 
 	onMount(async () => {
@@ -43,7 +102,13 @@
 </script>
 
 <div class="space-y-3 w-full p-10">
-	<Select id="board-select" bind:value={selectedBoard} class="w-full" placeholder="ボードを選択">
+	<Select 
+		id="board-select" 
+		bind:value={selectedBoard} 
+		class="w-full" 
+		placeholder="ボードを選択"
+		onchange={onBoardChange}
+	>
 		{#each boards as board}
 			<option value={board}>{board.name}</option>
 		{/each}
@@ -64,26 +129,29 @@
 	></textarea>
 
 	{#if selectedBoard}
-		{#await isOpenThreadAllowed() then isOpenThreadAllowed}
-			{#if !isOpenThreadAllowed}
-				<p class="text-red-500">
-					あなたは{selectedBoard.name}でスレッド立ち上げが許可されていません
-				</p>
-				<p class="text-red-500">あなたのスレッドは他のユーザーには見られない可能性があります</p>
-			{/if}
-		{:catch error}
-			<p class="text-red-500">エラーが発生しました: {error.message}</p>
-		{/await}
+		{#if isThreadAllowed === false}
+			<p class="text-orange-600 text-sm">このボードでスレッドを作成する権限がありません。リクエストを送信してください。</p>
+		{:else if isThreadAllowed === null}
+			<p class="text-gray-500 text-sm">権限を確認中...</p>
+		{/if}
 	{/if}
 
 	<div class="flex justify-end space-x-2">
-		<Button
-			color="primary"
-			onclick={async () => {
-				await publishThread(title, content);
-				window.location.href = '/';
-			}}
-			>送信
-		</Button>
+		{#if isThreadAllowed === true}
+			<Button
+				onclick={publishThread}
+				disabled={!title.trim() || !content.trim()}
+			>
+				送信
+			</Button>
+		{:else if isThreadAllowed === false}
+			<Button
+				onclick={requestThread}
+				disabled={!title.trim() || !content.trim()}
+				color="alternative"
+			>
+				スレッドリクエスト送信
+			</Button>
+		{/if}
 	</div>
 </div>

@@ -1,5 +1,7 @@
 import { dempaClient } from "$lib/dempa";
 import { Storage } from "$lib/storage";
+import { User } from "./user";
+import { Board } from "./board";
 
 export class Thread {
   static readonly KIND = 30101;
@@ -35,6 +37,12 @@ export class Thread {
     if (!author) {
       throw new Error("Public key not found in localStorage");
     }
+
+    const canCreateThread = await this.canUserCreateThread(author, boardId);
+    if (!canCreateThread) {
+      throw new Error("User is not allowed to create threads on this board");
+    }
+
     const client = dempaClient();
 
     const thread = {
@@ -74,5 +82,26 @@ export class Thread {
           thread.author,
         ),
     );
+  }
+
+  static async canUserCreateThread(userPubkey: string, boardId: string): Promise<boolean> {
+    try {
+      const user = await User.findByPublicKey(userPubkey);
+      if (!user) return false;
+
+      const board = await Board.find(boardId);
+      if (!board) return false;
+
+      const member = board.members.find((member) => member.pubkey === user.pubkey);
+      if (!member) return false;
+
+      const role = board.roles.find((role) => role.name === member.role);
+      if (!role) return false;
+
+      return role.actions.includes('OpenThread');
+    } catch (error) {
+      console.error('Error checking thread creation permission:', error);
+      return false;
+    }
   }
 }
