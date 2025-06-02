@@ -47,6 +47,33 @@ export class User {
     );
   }
 
+  static async login(
+    { secretKey }: { secretKey: string },
+  ): Promise<User | null> {
+    const skUint8Array =
+      bech32.decodeToBytes(secretKey as `${string}1${string}`).bytes;
+    
+    const pubkey = getPublicKey(skUint8Array);
+    const relayUrl = this.DEFAULT_RELAY_URL;
+    
+    const client = new DempaClient(skUint8Array, [relayUrl]);
+    const user = await client.fetch<User>(pubkey, User.KIND);
+    
+    if (user) {
+      Storage.setSecretKey(secretKey);
+      Storage.setPublicKey(pubkey);
+      Storage.setRelayUrl(relayUrl);
+      
+      return new User(
+        user.pubkey,
+        user.name,
+        user.JoinedBoardIds || [],
+      );
+    }
+    
+    return null;
+  }
+
   async update() {
     const client = dempaClient();
 

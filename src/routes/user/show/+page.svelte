@@ -1,27 +1,36 @@
 <script lang="ts">
 	import { User } from '$lib/models/user';
+	import { Storage } from '$lib/storage';
 	import { onMount } from 'svelte';
 
 	let user: null | User = $state(null);
-	let sk = $state('');
-	let showSk = $state(false);
+	let secretKey: null | string = $state(null);
+	let showSecretKey = $state(false);
 	let copied = $state(false);
 
 	onMount(async () => {
 		user = await User.current();
-		sk = localStorage.getItem('sk') || '';
+		secretKey = Storage.getSecretKey();
 	});
 
 	function toggleShowSk() {
-		showSk = !showSk;
+		showSecretKey = !showSecretKey;
 	}
 
 	function copySk() {
-		navigator.clipboard.writeText(sk);
+	  if (!secretKey) return;
+		navigator.clipboard.writeText(secretKey);
 		copied = true;
 		setTimeout(() => {
 			copied = false;
 		}, 2000);
+	}
+
+	function logout() {
+		if (confirm('ログアウトしますか？')) {
+			Storage.clearUserData();
+			window.location.reload();
+		}
 	}
 </script>
 
@@ -40,7 +49,7 @@
 				<p class="bg-gray-50 p-3 rounded break-all font-mono text-sm">{user.pubkey}</p>
 			</div>
 
-			{#if sk}
+			{#if secretKey}
 				<div class="flex flex-col mt-6 border-t pt-4">
 					<div class="flex flex-wrap items-center gap-3 mb-2">
 						<span class="text-sm text-gray-500">秘密鍵 (Secret Key)</span>
@@ -49,7 +58,7 @@
 								onclick={toggleShowSk}
 								class="px-3 py-1 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-colors"
 							>
-								{showSk ? '非表示' : '表示'}
+								{showSecretKey ? '非表示' : '表示'}
 							</button>
 							<button
 								onclick={copySk}
@@ -64,19 +73,29 @@
 					</div>
 
 					<div class="mt-2">
-						{#if showSk}
+						{#if showSecretKey}
 							<div class="p-3 bg-gray-50 rounded border break-all font-mono text-sm">
-								{sk}
+								{secretKey}
 							</div>
 						{:else}
-							<div class="p-3 bg-gray-50 rounded border text-gray-400 font-mono text-sm">
-								{'•'.repeat(sk.length)}
+							<div class="p-3 bg-gray-50 rounded border text-gray-400 font-mono text-sm overflow-hidden">
+								{'•'.repeat(secretKey.length)}
 							</div>
 						{/if}
 					</div>
 					<p class="text-xs text-red-500 mt-1">※ 秘密鍵は誰にも教えないでください</p>
 				</div>
 			{/if}
+
+			<!-- ログアウトボタン -->
+			<div class="flex justify-end mt-8 pt-4 border-t">
+				<button
+					onclick={logout}
+					class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-md transition-colors font-medium"
+				>
+					ログアウト
+				</button>
+			</div>
 		</div>
 	{:else}
 		<div class="flex justify-center items-center p-8">

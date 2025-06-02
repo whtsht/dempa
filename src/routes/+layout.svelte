@@ -10,7 +10,9 @@
 
 	onMount(async () => {
 		if (page.url.pathname === '/user/new') return;
-		if (!(await User.current())) {
+		try {
+			await User.current();
+		} catch (error) {
 			loginModalOpen = true;
 		}
 	});
