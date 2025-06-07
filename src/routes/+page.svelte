@@ -67,6 +67,7 @@
 			if (selectedBoard) {
 				pendingThreadRequests = await ThreadRequest.getPendingRequests(selectedBoard.id);
 				allThreadRequests = await ThreadRequest.all(selectedBoard.id);
+				threads = await Thread.all(selectedBoard.id); // 承認されたスレッドを表示するため
 			}
 			
 			alert('スレッドリクエストを承認しました。');
@@ -87,6 +88,7 @@
 			if (selectedBoard) {
 				pendingThreadRequests = await ThreadRequest.getPendingRequests(selectedBoard.id);
 				allThreadRequests = await ThreadRequest.all(selectedBoard.id);
+				threads = await Thread.all(selectedBoard.id); // 拒否されたスレッドが表示されないようにするため
 			}
 			
 			alert('スレッドリクエストを拒否しました。');
@@ -210,8 +212,16 @@
 							</span>
 						</div>
 					{/await}
-					<h3 class="text-lg font-semibold mb-2">{request.title}</h3>
-					<p class="text-gray-700 mb-3">{request.content}</p>
+					{#await request.getThread() then thread}
+						{#if thread && !thread.deleted}
+							<h3 class="text-lg font-semibold mb-2">{thread.title}</h3>
+							<p class="text-gray-700 mb-3">{thread.content}</p>
+						{:else if thread && thread.deleted}
+							<p class="text-gray-500 italic">削除されたスレッド</p>
+						{:else}
+							<p class="text-gray-500 italic">スレッド内容を取得できませんでした</p>
+						{/if}
+					{/await}
 					<div class="flex space-x-2">
 						<Button 
 							onclick={() => approveThreadRequest(request.id)}
@@ -265,8 +275,16 @@
 									</div>
 								</div>
 							{/await}
-							<h3 class="text-lg font-semibold mb-2">{request.title}</h3>
-							<p class="text-gray-700">{request.content}</p>
+							{#await request.getThread() then thread}
+								{#if thread && !thread.deleted}
+									<h3 class="text-lg font-semibold mb-2">{thread.title}</h3>
+									<p class="text-gray-700">{thread.content}</p>
+								{:else if thread && thread.deleted}
+									<p class="text-gray-500 italic">削除されたスレッド</p>
+								{:else}
+									<p class="text-gray-500 italic">スレッド内容を取得できませんでした</p>
+								{/if}
+							{/await}
 							{#if request.status === 'approved'}
 								<p class="text-sm text-green-600 mt-2">✓ スレッド作成権限が付与されました</p>
 							{/if}

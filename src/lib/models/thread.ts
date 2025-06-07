@@ -11,6 +11,8 @@ export class Thread {
   title: string;
   content: string;
   author: string;
+  pending?: boolean; // 承認待ちフラグ
+  deleted?: boolean; // 削除フラグ
 
   constructor(
     id: string,
@@ -18,12 +20,16 @@ export class Thread {
     title: string,
     content: string,
     author: string,
+    pending?: boolean,
+    deleted?: boolean,
   ) {
     this.id = id;
     this.boardId = boardId;
     this.title = title;
     this.content = content;
     this.author = author;
+    this.pending = pending;
+    this.deleted = deleted;
   }
 
   static async create(
@@ -61,6 +67,7 @@ export class Thread {
       thread.title,
       thread.content,
       thread.author,
+      false, // pending
     );
   }
 
@@ -72,16 +79,19 @@ export class Thread {
   static async all(boardId: string): Promise<Thread[]> {
     const client = dempaClient();
     const threads = await client.fetchAll<Thread>(Thread.KIND);
-    return threads.filter((thread) => thread.boardId === boardId).map(
-      (thread) =>
+    return threads
+      .filter((thread) => thread.boardId === boardId && !thread.pending && !thread.deleted)
+      .map((thread) =>
         new Thread(
           thread.id,
           thread.boardId,
           thread.title,
           thread.content,
           thread.author,
+          thread.pending,
+          thread.deleted,
         ),
-    );
+      );
   }
 
   static async canUserCreateThread(userPubkey: string, boardId: string): Promise<boolean> {
