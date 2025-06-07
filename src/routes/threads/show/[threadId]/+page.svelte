@@ -97,8 +97,10 @@
 			const { threadId } = page.params;
 			await CommentRequest.approve(requestId);
 			
+			// データを再読み込み
 			pendingRequests = await CommentRequest.getPendingRequests(threadId);
 			allRequests = await CommentRequest.all(threadId);
+			comments = (await Comment.all(threadId)).reverse(); // 承認されたコメントを表示するため
 			
 			isCommentAllowed = await updateIsCommentAllowed();
 			
@@ -118,8 +120,11 @@
 			const { threadId } = page.params;
 			await CommentRequest.reject(requestId);
 			
+			// データを再読み込み
 			pendingRequests = await CommentRequest.getPendingRequests(threadId);
 			allRequests = await CommentRequest.all(threadId);
+			comments = (await Comment.all(threadId)).reverse(); // 削除されたコメントを除外するため
+			
 			alert('コメントリクエストを拒否しました。');
 		} catch (error) {
 			console.error('Request rejection failed:', error);
@@ -261,7 +266,13 @@
 							</span>
 						</div>
 					{/await}
-					<p class="text-gray-700 mb-3">{request.content}</p>
+					{#await request.getComment() then comment}
+						{#if comment}
+							<p class="text-gray-700 mb-3">{comment.content}</p>
+						{:else}
+							<p class="text-gray-500 mb-3 italic">コメント内容を取得できませんでした</p>
+						{/if}
+					{/await}
 					<div class="flex space-x-2">
 						<Button 
 							onclick={() => approveRequest(request.id)}
@@ -314,7 +325,15 @@
 									</div>
 								</div>
 							{/await}
-							<p class="text-gray-700">{request.content}</p>
+							{#await request.getComment() then comment}
+								{#if comment && !comment.deleted}
+									<p class="text-gray-700">{comment.content}</p>
+								{:else if comment && comment.deleted}
+									<p class="text-gray-500 italic">削除されたコメント</p>
+								{:else}
+									<p class="text-gray-500 italic">コメント内容を取得できませんでした</p>
+								{/if}
+							{/await}
 							{#if request.status === 'approved'}
 								<p class="text-sm text-green-600 mt-2">✓ コメント投稿権限が付与されました</p>
 							{/if}

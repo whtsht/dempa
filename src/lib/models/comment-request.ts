@@ -2,31 +2,32 @@ import { dempaClient } from "$lib/dempa";
 import { Storage } from "$lib/storage";
 import { Thread } from "./thread";
 import { Board } from "./board";
+import { Comment } from "./comment";
 
 export class CommentRequest {
   private static readonly KIND = 30103;
 
   id: string;
-  content: string;
   threadId: string;
   requester: string;
   status: 'pending' | 'approved' | 'rejected';
   created_at: number;
+  commentId?: string; // 関連するコメントのID
 
   constructor(
     id: string,
-    content: string,
     threadId: string,
     requester: string,
     status: 'pending' | 'approved' | 'rejected',
     created_at: number,
+    commentId?: string,
   ) {
     this.id = id;
-    this.content = content;
     this.threadId = threadId;
     this.requester = requester;
     this.status = status;
     this.created_at = created_at;
+    this.commentId = commentId;
   }
 
   static async create(
@@ -39,24 +40,35 @@ export class CommentRequest {
       throw new Error("Public key not found in localStorage");
     }
 
-    const request = {
+    // 先にコメントを作成（非公開状態）
+    const comment = {
       id: crypto.randomUUID(),
       content,
+      author: requester,
+      threadId,
+      pending: true, // 承認待ちフラグ
+    };
+
+    await client.publish(comment, 30102, comment.id); // Comment.KIND
+
+    const request = {
+      id: crypto.randomUUID(),
       threadId,
       requester,
       status: 'pending' as const,
       created_at: Date.now(),
+      commentId: comment.id,
     };
 
     await client.publish(request, this.KIND, request.id);
 
     return new CommentRequest(
       request.id,
-      request.content,
       request.threadId,
       request.requester,
       request.status,
       request.created_at,
+      request.commentId,
     );
   }
 
@@ -80,6 +92,18 @@ export class CommentRequest {
 
     await CommentRequest.addUserToBoardWithCommentPermission(board, request.requester);
 
+    // 関連するコメントを公開状態にする
+    if (request.commentId) {
+      const comment = await client.fetch<any>(request.commentId, 30102); // Comment.KIND
+      if (comment) {
+        const updatedComment = {
+          ...comment,
+          pending: false, // 承認済みフラグ
+        };
+        await client.publish(updatedComment, 30102, request.commentId);
+      }
+    }
+
     const updatedRequest = {
       ...request,
       status: 'approved' as const,
@@ -94,6 +118,19 @@ export class CommentRequest {
     const request = await client.fetch<CommentRequest>(requestId, this.KIND);
     if (!request || request.status !== 'pending') {
       throw new Error("Request not found or already processed");
+    }
+
+    // 関連するコメントを削除
+    if (request.commentId) {
+      // コメントを削除するか、削除フラグを設定
+      const comment = await client.fetch<any>(request.commentId, 30102); // Comment.KIND
+      if (comment) {
+        const updatedComment = {
+          ...comment,
+          deleted: true, // 削除フラグ
+        };
+        await client.publish(updatedComment, 30102, request.commentId);
+      }
     }
 
     const updatedRequest = {
@@ -186,11 +223,11 @@ export class CommentRequest {
       .filter(request => request.threadId === threadId && request.status === 'pending')
       .map(request => new CommentRequest(
         request.id,
-        request.content,
         request.threadId,
         request.requester,
         request.status,
         request.created_at,
+        request.commentId,
       ));
   }
 
@@ -202,11 +239,11 @@ export class CommentRequest {
       .filter(request => request.threadId === threadId)
       .map(request => new CommentRequest(
         request.id,
-        request.content,
         request.threadId,
         request.requester,
         request.status,
         request.created_at,
+        request.commentId,
       ));
   }
 
@@ -218,11 +255,33 @@ export class CommentRequest {
       .filter(request => request.threadId === threadId && (request.status === 'approved' || request.status === 'rejected'))
       .map(request => new CommentRequest(
         request.id,
-        request.content,
         request.threadId,
         request.requester,
         request.status,
         request.created_at,
+        request.commentId,
       ));
+  }
+
+  async getComment(): Promise<Comment | null> {
+    if (!this.commentId) return null;
+    
+    const client = dempaClient();
+    try {
+      const comment = await client.fetch<Comment>(this.commentId, 30102); // Comment.KIND
+      if (!comment) return null;
+      
+      return new Comment(
+        comment.id,
+        comment.content,
+        comment.threadId,
+        comment.author,
+        comment.pending,
+        comment.deleted,
+      );
+    } catch (error) {
+      console.error('Error fetching comment:', error);
+      return null;
+    }
   }
 }

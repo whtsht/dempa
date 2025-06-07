@@ -11,17 +11,23 @@ export class Comment {
   content: string;
   threadId: string;
   author: string;
+  pending?: boolean; // 承認待ちフラグ
+  deleted?: boolean; // 削除フラグ
 
   constructor(
     id: string,
     content: string,
     threadId: string,
     author: string,
+    pending?: boolean,
+    deleted?: boolean,
   ) {
     this.id = id;
     this.content = content;
     this.threadId = threadId;
     this.author = author;
+    this.pending = pending;
+    this.deleted = deleted;
   }
 
   static async create(
@@ -48,7 +54,7 @@ export class Comment {
 
     await client.publish(comment, this.KIND, comment.id);
 
-    return new Comment(comment.id, content, threadId, comment.author);
+    return new Comment(comment.id, content, threadId, comment.author, false);
   }
 
   static async canUserComment(userPubkey: string, threadId: string): Promise<boolean> {
@@ -77,8 +83,17 @@ export class Comment {
 
   static async all(threadId: string): Promise<Comment[]> {
     const client = dempaClient();
-    return client.fetchAll<Comment>(this.KIND, 1000).then((
-      comments,
-    ) => comments.filter((comment) => comment.threadId === threadId));
+    const comments = await client.fetchAll<Comment>(this.KIND, 1000);
+    
+    return comments
+      .filter((comment) => comment.threadId === threadId && !comment.pending && !comment.deleted)
+      .map(comment => new Comment(
+        comment.id,
+        comment.content,
+        comment.threadId,
+        comment.author,
+        comment.pending,
+        comment.deleted,
+      ));
   }
 }
